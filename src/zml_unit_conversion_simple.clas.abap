@@ -4,7 +4,7 @@ CLASS zml_unit_conversion_simple DEFINITION
   CREATE PUBLIC .
 
   PUBLIC SECTION.
-TYPES: zdec_tt TYPE p LENGTH 10 DECIMALS 3.
+    TYPES: zdec_tt TYPE p LENGTH 10 DECIMALS 3.
 
     INTERFACES if_oo_adt_classrun .
     METHODS find_dimension
@@ -20,12 +20,10 @@ TYPES: zdec_tt TYPE p LENGTH 10 DECIMALS 3.
       IMPORTING
         !iv_msehi_in  TYPE msehi
         !iv_msehi_out TYPE msehi
-        !iv_input TYPE zdec_tt
+        !iv_input     TYPE zdec_tt
       EXPORTING
-        !ev_subrc TYPE sy-subrc
-        !ev_output TYPE zdec_tt.
-
-
+        !ev_subrc     TYPE sy-subrc
+        !ev_output    TYPE zdec_tt.
 
   PROTECTED SECTION.
   PRIVATE SECTION.
@@ -36,8 +34,8 @@ ENDCLASS.
 CLASS zml_unit_conversion_simple IMPLEMENTATION.
   METHOD if_oo_adt_classrun~main.
 
-    " using `find_dimensions`
-    data lv_unit type msehi.
+    " Example of using `find_dimensions` method
+    DATA lv_unit TYPE msehi.
     lv_unit = 'KG'.
     me->find_dimension( EXPORTING
     iv_langu = sy-langu iv_unit = lv_unit
@@ -45,20 +43,17 @@ CLASS zml_unit_conversion_simple IMPLEMENTATION.
     ev_dimension = DATA(lv_dimension) ).
     out->write( |For unit `{ lv_unit }` dimension is: { lv_dimension }|  ).
 
-
-    " using `unit_convertor`
+    " Example of using `unit_convertor` method
     DATA: lv_msehi_in  TYPE msehi,
           lv_msehi_out TYPE msehi.
     DATA: lv_input  TYPE p LENGTH 10 DECIMALS 3.
     lv_input = '128000.500'.
     lv_msehi_in  = 'KG'.
     lv_msehi_out = 'TO'.
-    me->unit_convertor( EXPORTING iv_input = lv_input iv_msehi_in = lv_msehi_in iv_msehi_out = lv_msehi_out IMPORTING ev_output = data(lv_output) ).
+    me->unit_convertor( EXPORTING iv_input = lv_input iv_msehi_in = lv_msehi_in iv_msehi_out = lv_msehi_out IMPORTING ev_output = DATA(lv_output) ).
     out->write( name = |Convernted value `{ lv_input }` from `{ lv_msehi_in }` TO `{ lv_msehi_out }`:| data = lv_output ).
 
   ENDMETHOD.
-
-
 
   METHOD find_dimension.
     CALL FUNCTION 'DIMENSION_GET_FOR_UNIT'
@@ -68,7 +63,7 @@ CLASS zml_unit_conversion_simple IMPLEMENTATION.
       IMPORTING
         dimension = ev_dimension
         text      = ev_text.
-      ev_subrc = sy-subcs.
+    ev_subrc = sy-subcs.
   ENDMETHOD.
 
   METHOD unit_convertor.
@@ -91,7 +86,7 @@ CLASS zml_unit_conversion_simple IMPLEMENTATION.
         units_missing        = 7
         unit_in_not_found    = 8
         unit_out_not_found   = 9.
-      ev_subrc = sy-subcs.
+    ev_subrc = sy-subcs.
   ENDMETHOD.
 
 ENDCLASS.

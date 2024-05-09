@@ -130,23 +130,13 @@ CLASS zml_products IMPLEMENTATION.
     DATA:
       lt_data TYPE /bobf/t_epm_product_root.
 
-    DATA:
-      lv_selection_parameters  TYPE /bobf/t_frw_query_selparam.
-    FIELD-SYMBOLS:
-      <iv_param> LIKE LINE OF iv_arr_param.
-
-    LOOP AT iv_arr_param ASSIGNING <iv_param>.
-      lv_selection_parameters = VALUE #( BASE lv_selection_parameters ( <iv_param>  ) ).
-
-    ENDLOOP.
-
     lo_srv_mgr = /bobf/cl_tra_serv_mgr_factory=>get_service_manager( iv_bo_key = /bobf/if_epm_product_c=>sc_bo_key ).
     lo_tran_mgr = /bobf/cl_tra_trans_mgr_factory=>get_transaction_manager( ).
 
     lo_srv_mgr->query(
       EXPORTING
         iv_query_key            = /bobf/if_epm_product_c=>sc_query-root-select_by_elements
-        it_selection_parameters = lv_selection_parameters
+        it_selection_parameters = iv_arr_param
         iv_fill_data            = abap_true
       IMPORTING
         et_data                 =  et_result
