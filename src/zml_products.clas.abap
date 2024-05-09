@@ -4,10 +4,6 @@ CLASS zml_products DEFINITION
   CREATE PUBLIC .
 
   PUBLIC SECTION.
-    TYPES: BEGIN OF tt_ZML_BP_stru,
-                     iv_value TYPE string,
-           END OF tt_ZML_BP_stru.
-    TYPES: zml_arr_values TYPE STANDARD TABLE OF tt_ZML_BP_stru WITH EMPTY KEY.
     INTERFACES if_oo_adt_classrun .
     METHODS read_all_products
       RETURNING VALUE(et_result) TYPE /bobf/t_epm_product_root .
@@ -25,25 +21,23 @@ CLASS zml_products DEFINITION
   PRIVATE SECTION.
 ENDCLASS.
 
-
-
 CLASS zml_products IMPLEMENTATION.
   METHOD if_oo_adt_classrun~main.
 
     DATA: zml_arr_uom_sel TYPE /bobf/t_frw_query_selparam.
     DATA(xml_ucs) = NEW  zml_unit_conversion_simple(  ).
 
-    DATA required_unit type msehi.
+    DATA required_unit TYPE msehi.
     required_unit = 'TO'. "this unit belongs to dimension `MASS`
 
-    xml_ucs->find_dimension( EXPORTING iv_langu = sy-langu iv_unit = required_unit IMPORTING ev_dimension = data(lv_dimension) ev_subrc = data(lv_subrc) ).
-    if ( lv_subrc = 0 and lv_dimension is not INITIAL ).
+    xml_ucs->find_dimension( EXPORTING iv_langu = sy-langu iv_unit = required_unit IMPORTING ev_dimension = DATA(lv_dimension) ev_subrc = DATA(lv_subrc) ).
+    IF ( lv_subrc = 0 AND lv_dimension IS NOT INITIAL ).
 
-      select t006~msehi from t006 where dimid = @lv_dimension into table @data(it_dim).
-      field-SYMBOLS: <it_dim_rec> like line of it_dim.
-      loop at it_dim assigning <it_dim_rec>.
-        zml_arr_uom_sel = VALUE #( base zml_arr_uom_sel ( sign = 'I' attribute_name = 'MEASURE_UNIT' option = 'EQ' low = <it_dim_rec>-msehi  ) ).
-      endloop.
+      SELECT t006~msehi FROM t006 WHERE dimid = @lv_dimension INTO TABLE @DATA(it_dim).
+      FIELD-SYMBOLS: <it_dim_rec> LIKE LINE OF it_dim.
+      LOOP AT it_dim ASSIGNING <it_dim_rec>.
+        zml_arr_uom_sel = VALUE #( BASE zml_arr_uom_sel ( sign = 'I' attribute_name = 'MEASURE_UNIT' option = 'EQ' low = <it_dim_rec>-msehi  ) ).
+      ENDLOOP.
 
     ENDIF.
 
@@ -54,14 +48,11 @@ CLASS zml_products IMPLEMENTATION.
 
     out->write( read_byqueryopt_products(  ) ).
 
-
-    DATA: zml_arr TYPE zml_arr_values.
-    zml_arr  = VALUE #( ( iv_value = 'KG' ) ).
     " Example of using of filtering parameters:
     "   sign can be "I" - include or "E" - exclude
     "   option(operator) can be: "EQ", "NE", "GE", "GT", "LE", "LT", "CP", "NP" "BT" "NB"
-    "       "I" - iclude can be only as relational , not suitable for text content
-    out->write( read_fltbyparams_products( iv_arr_param = VALUE #( base zml_arr_uom_sel "this array will add uom list selections by our required_unit
+    "       "I" - include can be only as relational , not suitable for text content
+    out->write( read_fltbyparams_products( iv_arr_param = VALUE #( BASE zml_arr_uom_sel "this array will add uom list selections by our required_unit
     ( sign = 'I' attribute_name = 'TYPE_CODE' option = 'EQ' low = '1' )
     ) ) ).
 
@@ -81,16 +72,9 @@ CLASS zml_products IMPLEMENTATION.
     lo_srv_mgr->query(
       EXPORTING
         iv_query_key            = /bobf/if_epm_product_c=>sc_query-root-select_all
-*        it_filter_key           =
-*        it_selection_parameters =
-*        is_query_options        =
         iv_fill_data            = abap_true
-*        it_requested_attributes =
       IMPORTING
-*        eo_message              =
-*        es_query_info           =
         et_data                 =  et_result
-*        et_key                  = data(lv_key)
     ).
   ENDMETHOD.
 
@@ -114,15 +98,9 @@ CLASS zml_products IMPLEMENTATION.
       EXPORTING
         iv_query_key            = /bobf/if_epm_product_c=>sc_query-root-select_by_elements
         it_filter_key           = lv_filter_key
-*        it_selection_parameters =
-*        is_query_options        =
         iv_fill_data            = abap_true
-*        it_requested_attributes =
       IMPORTING
-*        eo_message              =
-*        es_query_info           =
         et_data                 =  et_result
-*        et_key                  = data(lv_key)
     ).
   ENDMETHOD.
 
@@ -145,16 +123,10 @@ CLASS zml_products IMPLEMENTATION.
     lo_srv_mgr->query(
       EXPORTING
         iv_query_key            = /bobf/if_epm_product_c=>sc_query-root-select_by_elements
-*        it_filter_key           = lv_filter_key
-*        it_selection_parameters =
         is_query_options        = lv_query_options
         iv_fill_data            = abap_true
-*        it_requested_attributes =
       IMPORTING
-*        eo_message              =
-*        es_query_info           =
         et_data                 =  et_result
-*        et_key                  = data(lv_key)
     ).
   ENDMETHOD.
 
@@ -182,16 +154,10 @@ CLASS zml_products IMPLEMENTATION.
     lo_srv_mgr->query(
       EXPORTING
         iv_query_key            = /bobf/if_epm_product_c=>sc_query-root-select_by_elements
-*        it_filter_key           =
         it_selection_parameters = lv_selection_parameters
-*        is_query_options        =
         iv_fill_data            = abap_true
-*        it_requested_attributes =
       IMPORTING
-*        eo_message              =
-*        es_query_info           =
         et_data                 =  et_result
-*        et_key                  = data(lv_key)
     ).
   ENDMETHOD.
 

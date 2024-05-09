@@ -4,6 +4,7 @@ CLASS zml_unit_conversion_simple DEFINITION
   CREATE PUBLIC .
 
   PUBLIC SECTION.
+TYPES: zdec_tt TYPE p LENGTH 10 DECIMALS 3.
 
     INTERFACES if_oo_adt_classrun .
     METHODS find_dimension
@@ -15,6 +16,16 @@ CLASS zml_unit_conversion_simple DEFINITION
         !ev_text      TYPE t006t-txdim
         !ev_subrc     TYPE sy-subrc.
 
+    METHODS unit_convertor
+      IMPORTING
+        !iv_msehi_in  TYPE msehi
+        !iv_msehi_out TYPE msehi
+        !iv_input TYPE zdec_tt
+      EXPORTING
+        !ev_subrc TYPE sy-subrc
+        !ev_output TYPE zdec_tt.
+
+
 
   PROTECTED SECTION.
   PRIVATE SECTION.
@@ -25,54 +36,25 @@ ENDCLASS.
 CLASS zml_unit_conversion_simple IMPLEMENTATION.
   METHOD if_oo_adt_classrun~main.
 
-    DATA: lv_msehi_in  TYPE msehi,
-          lv_msehi_out TYPE msehi.
-
-    DATA: lv_input  TYPE p LENGTH 10 DECIMALS 3,
-          lv_output TYPE p LENGTH 10 DECIMALS 3.
-
+    " using `find_dimensions`
+    data lv_unit type msehi.
+    lv_unit = 'KG'.
     me->find_dimension( EXPORTING
-    iv_langu = sy-langu iv_unit = 'KG'
+    iv_langu = sy-langu iv_unit = lv_unit
     IMPORTING
     ev_dimension = DATA(lv_dimension) ).
+    out->write( |For unit `{ lv_unit }` dimension is: { lv_dimension }|  ).
 
-    out->write( lv_dimension ).
 
+    " using `unit_convertor`
+    DATA: lv_msehi_in  TYPE msehi,
+          lv_msehi_out TYPE msehi.
+    DATA: lv_input  TYPE p LENGTH 10 DECIMALS 3.
     lv_input = '128000.500'.
-
     lv_msehi_in  = 'KG'.
     lv_msehi_out = 'TO'.
-
-    DATA(rv_result) = abap_true.
-* Function module to check if the given units are convertible or not
-    CALL FUNCTION 'UNIT_CONVERSION_SIMPLE'
-      EXPORTING
-        input                = lv_input
-        no_type_check        = 'X'
-        round_sign           = ' '
-        unit_in              = lv_msehi_in
-        unit_out             = lv_msehi_out
-      IMPORTING
-*       ADD_CONST            =
-*       DECIMALS             =
-*       DENOMINATOR          =
-*       NUMERATOR            =
-        output               = lv_output
-      EXCEPTIONS
-        conversion_not_found = 1
-        division_by_zero     = 2
-        input_invalid        = 3
-        output_invalid       = 4
-        overflow             = 5
-        type_invalid         = 6
-        units_missing        = 7
-        unit_in_not_found    = 8
-        unit_out_not_found   = 9.
-    IF sy-subrc EQ 0.
-      "rv_result = abap_false.
-      out->write( lv_output ).
-    ENDIF.
-
+    me->unit_convertor( EXPORTING iv_input = lv_input iv_msehi_in = lv_msehi_in iv_msehi_out = lv_msehi_out IMPORTING ev_output = data(lv_output) ).
+    out->write( name = |Convernted value `{ lv_input }` from `{ lv_msehi_in }` TO `{ lv_msehi_out }`:| data = lv_output ).
 
   ENDMETHOD.
 
@@ -91,6 +73,30 @@ CLASS zml_unit_conversion_simple IMPLEMENTATION.
     IF sy-subrc <> 0.
       ev_subrc = sy-subcs.
     ENDIF.
+
+  ENDMETHOD.
+
+  METHOD unit_convertor.
+    CALL FUNCTION 'UNIT_CONVERSION_SIMPLE'
+      EXPORTING
+        input                = iv_input
+        no_type_check        = 'X'
+        round_sign           = ' '
+        unit_in              = iv_msehi_in
+        unit_out             = iv_msehi_out
+      IMPORTING
+        output               = ev_output
+      EXCEPTIONS
+        conversion_not_found = 1
+        division_by_zero     = 2
+        input_invalid        = 3
+        output_invalid       = 4
+        overflow             = 5
+        type_invalid         = 6
+        units_missing        = 7
+        unit_in_not_found    = 8
+        unit_out_not_found   = 9.
+      ev_subrc = sy-subcs.
 
   ENDMETHOD.
 
