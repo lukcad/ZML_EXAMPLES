@@ -61,8 +61,6 @@ CLASS zml_unit_conversion_simple IMPLEMENTATION.
 
 
   METHOD find_dimension.
-
-    ev_subrc = 0.
     CALL FUNCTION 'DIMENSION_GET_FOR_UNIT'
       EXPORTING
         language  = iv_langu
@@ -70,10 +68,7 @@ CLASS zml_unit_conversion_simple IMPLEMENTATION.
       IMPORTING
         dimension = ev_dimension
         text      = ev_text.
-    IF sy-subrc <> 0.
       ev_subrc = sy-subcs.
-    ENDIF.
-
   ENDMETHOD.
 
   METHOD unit_convertor.
@@ -97,7 +92,6 @@ CLASS zml_unit_conversion_simple IMPLEMENTATION.
         unit_in_not_found    = 8
         unit_out_not_found   = 9.
       ev_subrc = sy-subcs.
-
   ENDMETHOD.
 
 ENDCLASS.
