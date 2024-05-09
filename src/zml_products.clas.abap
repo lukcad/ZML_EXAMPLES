@@ -19,6 +19,11 @@ CLASS zml_products DEFINITION
       IMPORTING
                 !iv_query_options TYPE /bobf/s_frw_query_options
       RETURNING VALUE(et_result)  TYPE /bobf/t_epm_product_root .
+    METHODS read_bysql_products
+      IMPORTING
+        !iv_type_code type snwd_product_type_code
+        !iv_dimension type t006-dimid
+      RETURNING VALUE(et_result) TYPE /bobf/t_epm_product_root .
 
   PROTECTED SECTION.
   PRIVATE SECTION.
@@ -61,15 +66,15 @@ CLASS zml_products IMPLEMENTATION.
     ( sign = 'I' attribute_name = 'TYPE_CODE' option = 'EQ' low = '1' )
     ) ) ).
 
+    " Example of using `read_bysql_products` method (notice: bobf keys will be empty):
+    out->write( read_bysql_products( iv_dimension = lv_dimension iv_type_code = '1'  ) ).
+
   ENDMETHOD.
 
   METHOD read_all_products.
     DATA:
       lo_srv_mgr  TYPE REF TO /bobf/if_tra_service_manager,
       lo_tran_mgr TYPE REF TO /bobf/if_tra_transaction_mgr.
-    DATA:
-      lt_data TYPE /bobf/t_epm_product_root.
-
 
     lo_srv_mgr = /bobf/cl_tra_serv_mgr_factory=>get_service_manager( iv_bo_key = /bobf/if_epm_product_c=>sc_bo_key ).
     lo_tran_mgr = /bobf/cl_tra_trans_mgr_factory=>get_transaction_manager( ).
@@ -87,8 +92,6 @@ CLASS zml_products IMPLEMENTATION.
     DATA:
       lo_srv_mgr  TYPE REF TO /bobf/if_tra_service_manager,
       lo_tran_mgr TYPE REF TO /bobf/if_tra_transaction_mgr.
-    DATA:
-      lt_data TYPE /bobf/t_epm_product_root.
 
     lo_srv_mgr = /bobf/cl_tra_serv_mgr_factory=>get_service_manager( iv_bo_key = /bobf/if_epm_product_c=>sc_bo_key ).
     lo_tran_mgr = /bobf/cl_tra_trans_mgr_factory=>get_transaction_manager( ).
@@ -107,8 +110,6 @@ CLASS zml_products IMPLEMENTATION.
     DATA:
       lo_srv_mgr  TYPE REF TO /bobf/if_tra_service_manager,
       lo_tran_mgr TYPE REF TO /bobf/if_tra_transaction_mgr.
-    DATA:
-      lt_data TYPE /bobf/t_epm_product_root.
 
     lo_srv_mgr = /bobf/cl_tra_serv_mgr_factory=>get_service_manager( iv_bo_key = /bobf/if_epm_product_c=>sc_bo_key ).
     lo_tran_mgr = /bobf/cl_tra_trans_mgr_factory=>get_transaction_manager( ).
@@ -127,8 +128,6 @@ CLASS zml_products IMPLEMENTATION.
     DATA:
       lo_srv_mgr  TYPE REF TO /bobf/if_tra_service_manager,
       lo_tran_mgr TYPE REF TO /bobf/if_tra_transaction_mgr.
-    DATA:
-      lt_data TYPE /bobf/t_epm_product_root.
 
     lo_srv_mgr = /bobf/cl_tra_serv_mgr_factory=>get_service_manager( iv_bo_key = /bobf/if_epm_product_c=>sc_bo_key ).
     lo_tran_mgr = /bobf/cl_tra_trans_mgr_factory=>get_transaction_manager( ).
@@ -141,6 +140,20 @@ CLASS zml_products IMPLEMENTATION.
       IMPORTING
         et_data                 =  et_result
     ).
+  ENDMETHOD.
+
+
+  METHOD read_bysql_products.
+
+    DATA:
+    lt_data TYPE /bobf/t_epm_product_root.
+    select b~msehi from t006 as b where b~dimid = @iv_dimension into table @data(lt_msehi).
+    select * from /bobf/d_pr_root as a where a~type_code = @iv_type_code and a~measure_unit in ( select b~msehi from @lt_msehi as b ) into table @data(lv_result).
+    if sy-subrc = 0.
+      MOVE-CORRESPONDING lv_result to et_result.
+    ENDIF.
+
+
   ENDMETHOD.
 
 ENDCLASS.
