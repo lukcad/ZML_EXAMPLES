@@ -1,0 +1,44 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<abapGit version="v1.0.0" serializer="LCL_OBJECT_FUGR" serializer_version="v1.0.0">
+ <asx:abap xmlns:asx="http://www.sap.com/abapxml" version="1.0">
+  <asx:values>
+   <AREAT>ZML_EXAMPLES_FUNC</AREAT>
+   <INCLUDES>
+    <SOBJ_NAME>LZML_EXAMPLES_FUNCTOP</SOBJ_NAME>
+    <SOBJ_NAME>SAPLZML_EXAMPLES_FUNC</SOBJ_NAME>
+   </INCLUDES>
+   <FUNCTIONS>
+    <item>
+     <FUNCNAME>ZML_GET_PRODUCTS</FUNCNAME>
+     <SHORT_TEXT>ZML GET PRODUCTS</SHORT_TEXT>
+     <IMPORT>
+      <RSIMP>
+       <PARAMETER>IT_REP_PBT</PARAMETER>
+       <REFERENCE>X</REFERENCE>
+       <TYP>ZML_TT_REP_PBT</TYP>
+      </RSIMP>
+     </IMPORT>
+     <EXPORT>
+      <RSEXP>
+       <PARAMETER>ET_REP_PBT</PARAMETER>
+       <REFERENCE>X</REFERENCE>
+       <TYP>ZML_TT_REP_PBT</TYP>
+      </RSEXP>
+     </EXPORT>
+     <DOCUMENTATION>
+      <RSFDO>
+       <PARAMETER>IT_REP_PBT</PARAMETER>
+       <KIND>P</KIND>
+       <STEXT>Table type report per product type</STEXT>
+      </RSFDO>
+      <RSFDO>
+       <PARAMETER>ET_REP_PBT</PARAMETER>
+       <KIND>P</KIND>
+       <STEXT>Table type report per product type</STEXT>
+      </RSFDO>
+     </DOCUMENTATION>
+    </item>
+   </FUNCTIONS>
+  </asx:values>
+ </asx:abap>
+</abapGit>

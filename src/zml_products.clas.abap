@@ -21,9 +21,14 @@ CLASS zml_products DEFINITION
       RETURNING VALUE(et_result)  TYPE /bobf/t_epm_product_root .
     METHODS read_bysql_products
       IMPORTING
-        !iv_type_code type snwd_product_type_code
-        !iv_dimension type t006-dimid
+                !iv_type_code    TYPE snwd_product_type_code
+                !iv_dimension    TYPE t006-dimid
       RETURNING VALUE(et_result) TYPE /bobf/t_epm_product_root .
+
+    CLASS-METHODS get_report_pbt
+      IMPORTING
+                !it_pbt       TYPE zml_tt_rep_pbt
+      RETURNING VALUE(et_pbt) TYPE zml_tt_rep_pbt .
 
   PROTECTED SECTION.
   PRIVATE SECTION.
@@ -63,11 +68,19 @@ CLASS zml_products IMPLEMENTATION.
     "   option(operator) can be: "EQ", "NE", "GE", "GT", "LE", "LT", "CP", "NP" "BT" "NB"
     "       "I" - include can be only as relational , not suitable for text content
     out->write( read_fltbyparams_products( iv_arr_param = VALUE #( BASE zml_arr_uom_sel "this array will add uom list selections by our required_unit
-    ( sign = 'I' attribute_name = 'TYPE_CODE' option = 'EQ' low = '1' )
+    ( sign = 'I' attribute_name = 'TYPE_CODE' option = 'EQ' low = 'AD' )
     ) ) ).
 
     " Example of using `read_bysql_products` method (notice: bobf keys will be empty):
-    out->write( read_bysql_products( iv_dimension = lv_dimension iv_type_code = '1'  ) ).
+    out->write( read_bysql_products( iv_dimension = lv_dimension iv_type_code = 'PR'  ) ).
+
+    " Get report of total weight from products by product type in required UOM
+    DATA zipb TYPE zml_tt_rep_pbt.
+    zipb = VALUE #(
+      ( type_code = 'PR' measure_unit = 'KG' weight_measure = '000.00')
+      ( type_code = 'AD' measure_unit = 'G' weight_measure = '000.00')
+    ).
+    out->write( name = 'Total weight of Products per type:' data = get_report_pbt( it_pbt = zipb ) ).
 
   ENDMETHOD.
 
@@ -147,11 +160,64 @@ CLASS zml_products IMPLEMENTATION.
 
     DATA:
     lt_data TYPE /bobf/t_epm_product_root.
-    select b~msehi from t006 as b where b~dimid = @iv_dimension into table @data(lt_msehi).
-    select * from /bobf/d_pr_root as a where a~type_code = @iv_type_code and a~measure_unit in ( select b~msehi from @lt_msehi as b ) into table @data(lv_result).
-    if sy-subrc = 0.
-      MOVE-CORRESPONDING lv_result to et_result.
+    SELECT b~msehi FROM t006 AS b WHERE b~dimid = @iv_dimension INTO TABLE @DATA(lt_msehi).
+    SELECT * FROM /bobf/d_pr_root AS a WHERE a~type_code = @iv_type_code AND a~measure_unit IN ( SELECT b~msehi FROM @lt_msehi AS b ) INTO TABLE @DATA(lv_result).
+    IF sy-subrc = 0.
+      MOVE-CORRESPONDING lv_result TO et_result.
     ENDIF.
+
+
+  ENDMETHOD.
+
+  METHOD get_report_pbt.
+    DATA(zml_ucs) = NEW  zml_unit_conversion_simple(  ).
+    DATA required_unit TYPE msehi.
+    DATA lt_result TYPE zml_tt_rep_pbt.
+    DATA lt_int_result TYPE zml_tt_rep_pbt.
+    LOOP AT it_pbt ASSIGNING FIELD-SYMBOL(<ls_pbt>).
+      CLEAR lt_int_result.
+
+      required_unit = <ls_pbt>-measure_unit.
+      zml_ucs->find_dimension( EXPORTING iv_langu = sy-langu iv_unit = required_unit IMPORTING ev_dimension = DATA(lv_dimension) ev_subrc = DATA(lv_subrc) ).
+      SELECT b~msehi FROM t006 AS b WHERE b~dimid = @lv_dimension INTO TABLE @DATA(lt_msehi).
+      SELECT * FROM /bobf/d_pr_root AS a WHERE a~type_code = @<ls_pbt>-type_code AND a~measure_unit IN ( SELECT b~msehi FROM @lt_msehi AS b ) INTO TABLE @DATA(lv_result).
+      IF sy-subrc = 0.
+        LOOP AT lv_result ASSIGNING FIELD-SYMBOL(<ls_res>).
+          DATA zweight_in TYPE p LENGTH 10 DECIMALS 3.
+          DATA zweight_out TYPE p LENGTH 10 DECIMALS 3.
+          zweight_in = <ls_res>-weight_measure.
+          zml_ucs->unit_convertor(
+            EXPORTING
+              iv_msehi_in  = <ls_res>-measure_unit
+              iv_msehi_out = required_unit
+              iv_input     = zweight_in
+            IMPORTING
+              ev_subrc     = DATA(ev_subrc)
+              ev_output    = zweight_out
+          ).
+          IF ( ev_subrc = 0 ).
+            <ls_res>-measure_unit = required_unit.
+            <ls_res>-weight_measure = zweight_out.
+          ENDIF.
+
+
+        ENDLOOP.
+        MOVE-CORRESPONDING lv_result TO lt_int_result.
+        lt_result = VALUE #( BASE lt_result FOR  <ls_line> IN  lt_int_result ( <ls_line> ) ).
+      ENDIF.
+
+    ENDLOOP.
+
+    select
+        a~type_code,
+        a~measure_unit,
+        sum( a~weight_measure ) as weight_measure
+      from @lt_result as a
+      GROUP BY a~type_code, a~measure_unit
+      into table @data(lv_pbt).
+
+    MOVE-CORRESPONDING lv_pbt TO et_pbt.
+
 
 
   ENDMETHOD.
