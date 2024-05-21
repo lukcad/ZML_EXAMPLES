@@ -170,55 +170,65 @@ CLASS zml_products IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD get_report_pbt.
+
+    TYPES: BEGIN OF st_pbt_dim,
+             dimension TYPE dimid.
+             INCLUDE TYPE zml_rep_pbt_t.
+    TYPES: END OF st_pbt_dim.
+
+    DATA: lt_pbt_dim TYPE STANDARD TABLE OF st_pbt_dim.
+    DATA: lt_pbt_vrm TYPE STANDARD TABLE OF st_pbt_dim.
+    DATA: lt_result TYPE zml_tt_rep_pbt.
+    DATA: lt_int_result TYPE zml_tt_rep_pbt.
+    DATA: required_unit TYPE msehi.
+    DATA: zweight_in TYPE p LENGTH 10 DECIMALS 3.
+    DATA: zweight_out TYPE p LENGTH 10 DECIMALS 3.
+
     DATA(zml_ucs) = NEW  zml_unit_conversion_simple(  ).
-    DATA required_unit TYPE msehi.
-    DATA lt_result TYPE zml_tt_rep_pbt.
-    DATA lt_int_result TYPE zml_tt_rep_pbt.
-    LOOP AT it_pbt ASSIGNING FIELD-SYMBOL(<ls_pbt>).
-      CLEAR lt_int_result.
-
-      required_unit = <ls_pbt>-measure_unit.
-      zml_ucs->find_dimension( EXPORTING iv_langu = sy-langu iv_unit = required_unit IMPORTING ev_dimension = DATA(lv_dimension) ev_subrc = DATA(lv_subrc) ).
-      SELECT b~msehi FROM t006 AS b WHERE b~dimid = @lv_dimension INTO TABLE @DATA(lt_msehi).
-      SELECT * FROM /bobf/d_pr_root AS a WHERE a~type_code = @<ls_pbt>-type_code AND a~measure_unit IN ( SELECT b~msehi FROM @lt_msehi AS b ) INTO TABLE @DATA(lv_result).
-      IF sy-subrc = 0.
-        LOOP AT lv_result ASSIGNING FIELD-SYMBOL(<ls_res>).
-          DATA zweight_in TYPE p LENGTH 10 DECIMALS 3.
-          DATA zweight_out TYPE p LENGTH 10 DECIMALS 3.
-          zweight_in = <ls_res>-weight_measure.
-          zml_ucs->unit_convertor(
-            EXPORTING
-              iv_msehi_in  = <ls_res>-measure_unit
-              iv_msehi_out = required_unit
-              iv_input     = zweight_in
-            IMPORTING
-              ev_subrc     = DATA(ev_subrc)
-              ev_output    = zweight_out
-          ).
-          IF ( ev_subrc = 0 ).
-            <ls_res>-measure_unit = required_unit.
-            <ls_res>-weight_measure = zweight_out.
-          ENDIF.
-
-
-        ENDLOOP.
-        MOVE-CORRESPONDING lv_result TO lt_int_result.
-        lt_result = VALUE #( BASE lt_result FOR  <ls_line> IN  lt_int_result ( <ls_line> ) ).
+    lt_pbt_dim = CORRESPONDING #( it_pbt ).
+    LOOP AT lt_pbt_dim ASSIGNING FIELD-SYMBOL(<ls_pbt_dim>).
+      required_unit = <ls_pbt_dim>-measure_unit.
+      zml_ucs->find_dimension( EXPORTING iv_langu = sy-langu iv_unit = required_unit IMPORTING ev_dimension = DATA(lv_dimension_dim) ev_subrc = DATA(lv_subrc_dim) ).
+      IF ( lv_subrc_dim = 0 ).
+        <ls_pbt_dim>-dimension = lv_dimension_dim.
       ENDIF.
-
     ENDLOOP.
 
-    select
+    SELECT *
+    INTO CORRESPONDING FIELDS OF TABLE @lt_pbt_vrm
+    FROM /bobf/d_pr_root AS pr_root
+    FOR ALL ENTRIES IN @lt_pbt_dim
+    WHERE pr_root~type_code = @lt_pbt_dim-type_code AND measure_unit IN ( SELECT b~msehi FROM t006 AS b WHERE b~dimid = @lt_pbt_dim-dimension ).
+
+    LOOP AT lt_pbt_dim ASSIGNING FIELD-SYMBOL(<ls_pbtdim>).
+      required_unit = <ls_pbtdim>-measure_unit.
+      LOOP AT lt_pbt_vrm ASSIGNING FIELD-SYMBOL(<ls_pbt_vrm>) where dimension = <ls_pbtdim>-dimension.
+        zweight_in = <ls_pbt_vrm>-weight_measure.
+        zml_ucs->unit_convertor(
+          EXPORTING
+            iv_msehi_in  = <ls_pbt_vrm>-measure_unit
+            iv_msehi_out = required_unit
+            iv_input     = zweight_in
+          IMPORTING
+            ev_subrc     = DATA(ev_subrc)
+            ev_output    = zweight_out
+        ).
+        IF ( ev_subrc = 0 ).
+          <ls_pbt_vrm>-measure_unit = required_unit.
+          <ls_pbt_vrm>-weight_measure = zweight_out.
+        ENDIF.
+      ENDLOOP.
+    ENDLOOP.
+
+    SELECT
         a~type_code,
         a~measure_unit,
-        sum( a~weight_measure ) as weight_measure
-      from @lt_result as a
+        SUM( a~weight_measure ) AS weight_measure
+      FROM @lt_pbt_vrm AS a
       GROUP BY a~type_code, a~measure_unit
-      into table @data(lv_pbt).
+      INTO TABLE @DATA(lv_pbt).
 
-    MOVE-CORRESPONDING lv_pbt TO et_pbt.
-
-
+    et_pbt = CORRESPONDING #( lv_pbt ).
 
   ENDMETHOD.
 
