@@ -189,7 +189,7 @@ CLASS zml_products IMPLEMENTATION.
     DATA: zweight_in TYPE p LENGTH 10 DECIMALS 3.
     DATA: zweight_out TYPE p LENGTH 10 DECIMALS 3.
 
-    " STep 1: find dimensions for requested aggregated report records
+    " Step 1: enrich requested records by information about dimensions and range of UOM per dimension.
     DATA(zml_ucs) = NEW  zml_unit_conversion_simple(  ).
     lt_pbt_dim = CORRESPONDING #( it_pbt ).
     LOOP AT lt_pbt_dim ASSIGNING FIELD-SYMBOL(<ls_pbt_dim>).
@@ -200,13 +200,15 @@ CLASS zml_products IMPLEMENTATION.
       ENDIF.
     ENDLOOP.
 
+
+     " Step 2: extract data from database to temporary table according to requested type of code and ranges of UOM per dimension.
     SELECT *
     INTO CORRESPONDING FIELDS OF TABLE @lt_pbt_tmp
     FROM /bobf/d_pr_root AS pr_root
     FOR ALL ENTRIES IN @lt_pbt_dim
     WHERE pr_root~type_code = @lt_pbt_dim-type_code AND measure_unit IN ( SELECT b~msehi FROM t006 AS b WHERE b~dimid = @lt_pbt_dim-dimension ).
 
-    " conversion weight and UOM into temporary records from the extracted values to the required values
+    " Step 3: Convert of UOM and value of weight for extracted records
     LOOP AT lt_pbt_dim ASSIGNING FIELD-SYMBOL(<ls_pbtdim>).
       required_unit = <ls_pbtdim>-measure_unit.
       LOOP AT lt_pbt_tmp ASSIGNING FIELD-SYMBOL(<ls_pbt_tmp>) WHERE dimension = <ls_pbtdim>-dimension.
@@ -227,7 +229,7 @@ CLASS zml_products IMPLEMENTATION.
       ENDLOOP.
     ENDLOOP.
 
-* OLD APPROACH: get result as grouped values from temporary table
+* Step 4: OLD APPROACH: get result per aggregated records with calculating total weight
 *
 *    SELECT
 *        a~type_code,
@@ -239,17 +241,16 @@ CLASS zml_products IMPLEMENTATION.
 *
 *    et_pbt = CORRESPONDING #( lt_pbt ).
 
-    " NEW APPROACH: get result as grouped values from temporary table
-    et_pbt = VALUE #( FOR GROUPS ls_groups OF <lspbttmp> IN lt_pbt_tmp GROUP BY ( type_code = <lspbttmp>-type_code measure_unit = <lspbttmp>-measure_unit  ) (
+    " Step 4: NEW APPROACH: get result per aggregated records with calculating total weight
+    et_pbt = VALUE #( FOR GROUPS ls_groups OF <lspbttmp> IN lt_pbt_tmp
+      GROUP BY ( type_code = <lspbttmp>-type_code measure_unit = <lspbttmp>-measure_unit  ) (
         type_code = ls_groups-type_code
         measure_unit = ls_groups-measure_unit
         weight_measure = REDUCE #(
           INIT _sum TYPE dec10_2
           FOR _grp_entry IN GROUP ls_groups
           NEXT _sum = _sum + _grp_entry-weight_measure
-        )
-
-      ) ).
+        ) ) ).
 
   ENDMETHOD.
 
