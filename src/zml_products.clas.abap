@@ -189,7 +189,7 @@ CLASS zml_products IMPLEMENTATION.
     DATA: zweight_in TYPE p LENGTH 10 DECIMALS 3.
     DATA: zweight_out TYPE p LENGTH 10 DECIMALS 3.
 
-    " Step 1: enrich requested records by information about dimensions and range of UOM per dimension.
+    " Step 1: enrich requested records by information about dimensions.
     DATA(zml_ucs) = NEW  zml_unit_conversion_simple(  ).
     lt_pbt_dim = CORRESPONDING #( it_pbt ).
     LOOP AT lt_pbt_dim ASSIGNING FIELD-SYMBOL(<ls_pbt_dim>).
@@ -201,7 +201,7 @@ CLASS zml_products IMPLEMENTATION.
     ENDLOOP.
 
 
-     " Step 2: extract data from database to temporary table according to requested type of code and ranges of UOM per dimension.
+     " Step 2: extract data from database to temporary table according to requested type of code and dimension.
     SELECT *
     INTO CORRESPONDING FIELDS OF TABLE @lt_pbt_tmp
     FROM /bobf/d_pr_root AS pr_root
