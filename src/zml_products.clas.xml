@@ -11,6 +11,27 @@
     <FIXPT>X</FIXPT>
     <UNICODE>X</UNICODE>
    </VSEOCLASS>
+   <DESCRIPTIONS>
+    <SEOCOMPOTX>
+     <CMPNAME>GET_REPORT_PBT</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Class prepare aggregated report</DESCRIPT>
+    </SEOCOMPOTX>
+   </DESCRIPTIONS>
+   <DESCRIPTIONS_SUB>
+    <SEOSUBCOTX>
+     <CMPNAME>GET_REPORT_PBT</CMPNAME>
+     <SCONAME>ET_PBT</SCONAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Output aggregated Table with weights according to the requir</DESCRIPT>
+    </SEOSUBCOTX>
+    <SEOSUBCOTX>
+     <CMPNAME>GET_REPORT_PBT</CMPNAME>
+     <SCONAME>IT_PBT</SCONAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Input Table which contains list of required types and UOM to</DESCRIPT>
+    </SEOSUBCOTX>
+   </DESCRIPTIONS_SUB>
   </asx:values>
  </asx:abap>
 </abapGit>

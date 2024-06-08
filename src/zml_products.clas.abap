@@ -25,6 +25,11 @@ CLASS zml_products DEFINITION
                 !iv_dimension    TYPE t006-dimid
       RETURNING VALUE(et_result) TYPE /bobf/t_epm_product_root .
 
+
+    "! <p class="shorttext synchronized" lang="en">Class prepare aggregated report</p>
+    "!
+    "! @parameter it_pbt | <p class="shorttext synchronized" lang="en">Input Table which contains list of required types and UOM to be aggregated</p>
+    "! @parameter et_pbt | <p class="shorttext synchronized" lang="en">Output aggregated Table with weights according to the required types and UOM</p>
     CLASS-METHODS get_report_pbt
       IMPORTING
                 !it_pbt       TYPE zml_tt_rep_pbt
@@ -74,7 +79,7 @@ CLASS zml_products IMPLEMENTATION.
     " Example of using `read_bysql_products` method (notice: bobf keys will be empty):
     out->write( read_bysql_products( iv_dimension = lv_dimension iv_type_code = 'PR'  ) ).
 
-    " Get report of total weight from products by product type in required UOM
+    " Example of creating of the aggregated report of total weight from products by product type and required UOM
     DATA zipb TYPE zml_tt_rep_pbt.
     zipb = VALUE #(
       ( type_code = 'PR' measure_unit = 'KG' weight_measure = '000.00')
@@ -177,13 +182,14 @@ CLASS zml_products IMPLEMENTATION.
     TYPES: END OF st_pbt_dim.
 
     DATA: lt_pbt_dim TYPE STANDARD TABLE OF st_pbt_dim.
-    DATA: lt_pbt_vrm TYPE STANDARD TABLE OF st_pbt_dim.
+    DATA: lt_pbt_tmp TYPE STANDARD TABLE OF st_pbt_dim.
     DATA: lt_result TYPE zml_tt_rep_pbt.
     DATA: lt_int_result TYPE zml_tt_rep_pbt.
     DATA: required_unit TYPE msehi.
     DATA: zweight_in TYPE p LENGTH 10 DECIMALS 3.
     DATA: zweight_out TYPE p LENGTH 10 DECIMALS 3.
 
+    " STep 1: find dimensions for requested aggregated report records
     DATA(zml_ucs) = NEW  zml_unit_conversion_simple(  ).
     lt_pbt_dim = CORRESPONDING #( it_pbt ).
     LOOP AT lt_pbt_dim ASSIGNING FIELD-SYMBOL(<ls_pbt_dim>).
@@ -195,18 +201,19 @@ CLASS zml_products IMPLEMENTATION.
     ENDLOOP.
 
     SELECT *
-    INTO CORRESPONDING FIELDS OF TABLE @lt_pbt_vrm
+    INTO CORRESPONDING FIELDS OF TABLE @lt_pbt_tmp
     FROM /bobf/d_pr_root AS pr_root
     FOR ALL ENTRIES IN @lt_pbt_dim
     WHERE pr_root~type_code = @lt_pbt_dim-type_code AND measure_unit IN ( SELECT b~msehi FROM t006 AS b WHERE b~dimid = @lt_pbt_dim-dimension ).
 
+    " conversion weight and UOM into temporary records from the extracted values to the required values
     LOOP AT lt_pbt_dim ASSIGNING FIELD-SYMBOL(<ls_pbtdim>).
       required_unit = <ls_pbtdim>-measure_unit.
-      LOOP AT lt_pbt_vrm ASSIGNING FIELD-SYMBOL(<ls_pbt_vrm>) where dimension = <ls_pbtdim>-dimension.
-        zweight_in = <ls_pbt_vrm>-weight_measure.
+      LOOP AT lt_pbt_tmp ASSIGNING FIELD-SYMBOL(<ls_pbt_tmp>) WHERE dimension = <ls_pbtdim>-dimension.
+        zweight_in = <ls_pbt_tmp>-weight_measure.
         zml_ucs->unit_convertor(
           EXPORTING
-            iv_msehi_in  = <ls_pbt_vrm>-measure_unit
+            iv_msehi_in  = <ls_pbt_tmp>-measure_unit
             iv_msehi_out = required_unit
             iv_input     = zweight_in
           IMPORTING
@@ -214,21 +221,35 @@ CLASS zml_products IMPLEMENTATION.
             ev_output    = zweight_out
         ).
         IF ( ev_subrc = 0 ).
-          <ls_pbt_vrm>-measure_unit = required_unit.
-          <ls_pbt_vrm>-weight_measure = zweight_out.
+          <ls_pbt_tmp>-measure_unit = required_unit.
+          <ls_pbt_tmp>-weight_measure = zweight_out.
         ENDIF.
       ENDLOOP.
     ENDLOOP.
 
-    SELECT
-        a~type_code,
-        a~measure_unit,
-        SUM( a~weight_measure ) AS weight_measure
-      FROM @lt_pbt_vrm AS a
-      GROUP BY a~type_code, a~measure_unit
-      INTO TABLE @DATA(lv_pbt).
+* OLD APPROACH: get result as grouped values from temporary table
+*
+*    SELECT
+*        a~type_code,
+*        a~measure_unit,
+*        SUM( a~weight_measure ) AS weight_measure
+*      FROM @lt_pbt_tmp AS a
+*      GROUP BY a~type_code, a~measure_unit
+*      INTO TABLE @DATA(lt_pbt).
+*
+*    et_pbt = CORRESPONDING #( lt_pbt ).
 
-    et_pbt = CORRESPONDING #( lv_pbt ).
+    " NEW APPROACH: get result as grouped values from temporary table
+    et_pbt = VALUE #( FOR GROUPS ls_groups OF <lspbttmp> IN lt_pbt_tmp GROUP BY ( type_code = <lspbttmp>-type_code measure_unit = <lspbttmp>-measure_unit  ) (
+        type_code = ls_groups-type_code
+        measure_unit = ls_groups-measure_unit
+        weight_measure = REDUCE #(
+          INIT _sum TYPE dec10_2
+          FOR _grp_entry IN GROUP ls_groups
+          NEXT _sum = _sum + _grp_entry-weight_measure
+        )
+
+      ) ).
 
   ENDMETHOD.
 
