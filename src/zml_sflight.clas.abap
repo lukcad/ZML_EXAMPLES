@@ -9,11 +9,11 @@ CLASS zml_sflight DEFINITION
     METHODS itab_to_json_output
       IMPORTING
                 !it_tab        TYPE ANY TABLE
-      RETURNING VALUE(et_json) TYPE string .
+      RETURNING VALUE(ev_json) TYPE string .
     METHODS itab_to_xml_output
       IMPORTING
                 !it_tab        TYPE ANY TABLE
-      RETURNING VALUE(et_xml) TYPE string .
+      RETURNING VALUE(ev_xml) TYPE string .
   PROTECTED SECTION.
   PRIVATE SECTION.
 ENDCLASS.
@@ -51,7 +51,7 @@ CLASS zml_sflight IMPLEMENTATION.
                                        compress      = abap_true
                                       ).
     IF ( sy-subrc = 0 ).
-      et_json = lv_json.
+      ev_json = lv_json.
     ENDIF.
 
   ENDMETHOD.
@@ -64,7 +64,7 @@ CLASS zml_sflight IMPLEMENTATION.
       SOURCE model = it_tab
       RESULT XML lv_xml.
     IF ( sy-subrc = 0 ).
-      et_xml = lv_xml.
+      ev_xml = lv_xml.
     ENDIF.
   ENDMETHOD.
 
